@@ -19,9 +19,8 @@ find "$SRC_VERSION" -type d -name tests -print0 | xargs -0 rm -rf
 rm -rf "$ROOT_DIR"/stacks/robomotion/yaml
 mkdir -p "$ROOT_DIR"/stacks/robomotion/yaml
 
-# render robomotion-ingress
 helm template \
-  robomotion \
-  --namespace robomotion-system \
-  --values "$ROOT_DIR"/src/robomotion/1.0.2/values.yaml \
-  "$SRC_VERSION" > "$ROOT_DIR"/stacks/robomotion/yaml/robomotion.yaml
+ --name robomotion \
+ --namespace robomotion-system \
+ --values "$ROOT_DIR"/src/robomotion/"$SRC_VERSION"/values.yaml \
+ "$SRC_VERSION" > "$ROOT_DIR"/stacks/robomotion/yaml/robomotion.yaml
