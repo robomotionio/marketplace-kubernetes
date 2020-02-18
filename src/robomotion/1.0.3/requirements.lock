@@ -11,5 +11,8 @@ dependencies:
 - name: minio
   repository: https://kubernetes-charts.storage.googleapis.com/
   version: 3.0.1
-digest: sha256:2e78888918e16dcb5788e18cdfccf0ab621f91a57734d2b6132a848851ab839a
-generated: "2020-02-17T16:56:14.518230654+03:00"
+- name: nginx-ingress
+  repository: https://kubernetes-charts.storage.googleapis.com/
+  version: 1.30.3
+digest: sha256:28520ced5768abb52e0baf3fcb92fdc3f6c01b7cf53ade594d4bd33b2c596ce5
+generated: "2020-02-18T09:38:40.986788939+03:00"

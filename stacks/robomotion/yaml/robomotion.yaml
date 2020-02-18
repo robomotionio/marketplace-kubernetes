@@ -26,7 +26,7 @@ metadata:
     heritage: "Helm"
 type: Opaque
 data:
-  postgresql-password: "bzkyajJwY01JSA=="
+  postgresql-password: "Tk9MTnRWN05tcQ=="
 ---
 # Source: robomotion/charts/redis/templates/secret.yaml
 apiVersion: v1
@@ -40,7 +40,7 @@ metadata:
     heritage: "Helm"
 type: Opaque
 data:
-  redis-password: "c0xlMkEzVHZHMw=="
+  redis-password: "ZXNpWEJpZUs2Wg=="
 ---
 # Source: robomotion/charts/minio/templates/configmap.yaml
 apiVersion: v1
@@ -259,6 +259,28 @@ metadata:
   name: "robomotion-minio"
   namespace: "robomotion-system"
 ---
+# Source: robomotion/charts/nginx-ingress/templates/controller-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: nginx-ingress
+    chart: nginx-ingress-1.30.3
+    heritage: Helm
+    release: robomotion
+  name: robomotion-nginx-ingress
+---
+# Source: robomotion/charts/nginx-ingress/templates/default-backend-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: nginx-ingress
+    chart: nginx-ingress-1.30.3
+    heritage: Helm
+    release: robomotion
+  name: robomotion-nginx-ingress-backend
+---
 # Source: robomotion/templates/service-account.yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -267,9 +289,70 @@ metadata:
   namespace: robomotion-system
   labels:
     app: robomotion
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     release: robomotion
     heritage: Helm
+---
+# Source: robomotion/charts/nginx-ingress/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: nginx-ingress
+    chart: nginx-ingress-1.30.3
+    heritage: Helm
+    release: robomotion
+  name: robomotion-nginx-ingress
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - endpoints
+      - nodes
+      - pods
+      - secrets
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - extensions
+      - "networking.k8s.io" # k8s 1.14+
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - extensions
+      - "networking.k8s.io" # k8s 1.14+
+    resources:
+      - ingresses/status
+    verbs:
+      - update
 ---
 # Source: robomotion/templates/api-role.yaml
 kind: ClusterRole
@@ -281,6 +364,25 @@ rules:
  - apiGroups: ["*"]
    resources: ["namespaces"]
    verbs: ["get"]
+---
+# Source: robomotion/charts/nginx-ingress/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: nginx-ingress
+    chart: nginx-ingress-1.30.3
+    heritage: Helm
+    release: robomotion
+  name: robomotion-nginx-ingress
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: robomotion-nginx-ingress
+subjects:
+  - kind: ServiceAccount
+    name: robomotion-nginx-ingress
+    namespace: robomotion-system
 ---
 # Source: robomotion/templates/api-rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -296,6 +398,109 @@ subjects:
 - kind: ServiceAccount
   namespace: robomotion-system
   name: robomotion
+---
+# Source: robomotion/charts/nginx-ingress/templates/controller-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app: nginx-ingress
+    chart: nginx-ingress-1.30.3
+    heritage: Helm
+    release: robomotion
+  name: robomotion-nginx-ingress
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - pods
+      - secrets
+      - endpoints
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - extensions
+      - "networking.k8s.io" # k8s 1.14+
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - extensions
+      - "networking.k8s.io" # k8s 1.14+
+    resources:
+      - ingresses/status
+    verbs:
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      - ingress-controller-leader-nginx
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+    verbs:
+      - create
+      - get
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
+# Source: robomotion/charts/nginx-ingress/templates/controller-rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app: nginx-ingress
+    chart: nginx-ingress-1.30.3
+    heritage: Helm
+    release: robomotion
+  name: robomotion-nginx-ingress
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: robomotion-nginx-ingress
+subjects:
+  - kind: ServiceAccount
+    name: robomotion-nginx-ingress
+    namespace: robomotion-system
 ---
 # Source: robomotion/charts/minio/templates/service.yaml
 apiVersion: v1
@@ -317,6 +522,56 @@ spec:
   selector:
     app: minio
     release: robomotion
+---
+# Source: robomotion/charts/nginx-ingress/templates/controller-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nginx-ingress
+    chart: nginx-ingress-1.30.3
+    component: "controller"
+    heritage: Helm
+    release: robomotion
+  name: robomotion-nginx-ingress-controller
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: https
+  selector:
+    app: nginx-ingress
+    component: "controller"
+    release: robomotion
+  type: "LoadBalancer"
+---
+# Source: robomotion/charts/nginx-ingress/templates/default-backend-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nginx-ingress
+    chart: nginx-ingress-1.30.3
+    component: "default-backend"
+    heritage: Helm
+    release: robomotion
+  name: robomotion-nginx-ingress-default-backend
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+  selector:
+    app: nginx-ingress
+    component: "default-backend"
+    release: robomotion
+  type: "ClusterIP"
 ---
 # Source: robomotion/charts/postgresql/templates/svc-headless.yaml
 apiVersion: v1
@@ -409,7 +664,7 @@ metadata:
   name: robomotion-robomotion-admin
   labels:
     app: robomotion-robomotion-admin
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-admin
@@ -431,7 +686,7 @@ metadata:
   name: robomotion-robomotion-api-grpc
   labels:
     app: robomotion-robomotion-api
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-api
@@ -452,7 +707,7 @@ metadata:
   name: robomotion-robomotion-api
   labels:
     app: robomotion-robomotion-api
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-api
@@ -474,7 +729,7 @@ metadata:
   name: robomotion-robomotion-auth
   labels:
     app: robomotion-robomotion-auth
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-auth
@@ -496,7 +751,7 @@ metadata:
   name: robomotion-robomotion-designer
   labels:
     app: robomotion-robomotion-designer
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-designer
@@ -518,7 +773,7 @@ metadata:
   name: robomotion-robomotion-proxy-grpc
   labels:
     app: robomotion-robomotion-proxy
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-proxy
@@ -539,7 +794,7 @@ metadata:
   name: robomotion-robomotion-proxy
   labels:
     app: robomotion-robomotion-proxy
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-proxy
@@ -560,7 +815,7 @@ metadata:
   name: robomotion-robomotion-scheduler-grpc
   labels:
     app: robomotion-robomotion-scheduler
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-scheduler
@@ -666,6 +921,159 @@ spec:
         - name: minio-config-dir
           emptyDir: {}
 ---
+# Source: robomotion/charts/nginx-ingress/templates/controller-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx-ingress
+    chart: nginx-ingress-1.30.3
+    component: "controller"
+    heritage: Helm
+    release: robomotion
+  name: robomotion-nginx-ingress-controller
+  annotations:
+    {}
+spec:
+  selector:
+    matchLabels:
+      app: nginx-ingress
+      release: robomotion
+  replicas: 1
+  revisionHistoryLimit: 10
+  strategy:
+    {}
+  minReadySeconds: 0
+  template:
+    metadata:
+      labels:
+        app: nginx-ingress
+        component: "controller"
+        release: robomotion
+    spec:
+      dnsPolicy: ClusterFirst
+      containers:
+        - name: nginx-ingress-controller
+          image: "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.28.0"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - /nginx-ingress-controller
+            - --default-backend-service=robomotion-system/robomotion-nginx-ingress-default-backend
+            - --publish-service=robomotion-system/robomotion-nginx-ingress-controller
+            - --election-id=ingress-controller-leader
+            - --ingress-class=nginx
+            - --configmap=robomotion-system/robomotion-nginx-ingress-controller
+          securityContext:
+            capabilities:
+                drop:
+                - ALL
+                add:
+                - NET_BIND_SERVICE
+            runAsUser: 101
+            allowPrivilegeEscalation: true
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            {}
+      hostNetwork: false
+      serviceAccountName: robomotion-nginx-ingress
+      terminationGracePeriodSeconds: 60
+---
+# Source: robomotion/charts/nginx-ingress/templates/default-backend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx-ingress
+    chart: nginx-ingress-1.30.3
+    component: "default-backend"
+    heritage: Helm
+    release: robomotion
+  name: robomotion-nginx-ingress-default-backend
+spec:
+  selector:
+    matchLabels:
+      app: nginx-ingress
+      release: robomotion
+  replicas: 1
+  revisionHistoryLimit: 10
+  template:
+    metadata:
+      labels:
+        app: nginx-ingress
+        component: "default-backend"
+        release: robomotion
+    spec:
+      containers:
+        - name: nginx-ingress-default-backend
+          image: "k8s.gcr.io/defaultbackend-amd64:1.5"
+          imagePullPolicy: "IfNotPresent"
+          args:
+          securityContext:
+            runAsUser: 65534
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 6
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            {}
+      serviceAccountName: robomotion-nginx-ingress-backend
+      terminationGracePeriodSeconds: 60
+---
 # Source: robomotion/templates/admin-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -673,7 +1081,7 @@ metadata:
   name: robomotion-robomotion-admin
   labels:
     app: robomotion-robomotion-admin
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-admin
@@ -711,7 +1119,7 @@ metadata:
   name: robomotion-robomotion-api
   labels:
     app: robomotion-robomotion-api
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-api
@@ -795,7 +1203,7 @@ metadata:
   name: robomotion-robomotion-auth
   labels:
     app: robomotion-robomotion-auth
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-auth
@@ -835,7 +1243,7 @@ metadata:
   name: robomotion-robomotion-designer
   labels:
     app: robomotion-robomotion-designer
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-designer
@@ -877,7 +1285,7 @@ metadata:
   name: robomotion-robomotion-proxy
   labels:
     app: robomotion-robomotion-proxy
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-proxy
@@ -923,7 +1331,7 @@ metadata:
   name: robomotion-robomotion-scheduler
   labels:
     app: robomotion-robomotion-scheduler
-    chart: robomotion-1.0.2
+    chart: robomotion-1.0.3
     heritage: Helm
     release: robomotion
     component: robomotion-scheduler
@@ -1137,7 +1545,7 @@ spec:
       annotations:
         checksum/health: af562480be86d5e338b4852f43d73c8e0cd3f35b0105828b999a57a82f33740d
         checksum/configmap: cc98d23d2b618eb9c91433718c978376f2c6d833acb4f0d773a9f98c06ee70cc
-        checksum/secret: 977f34897d93ffa2853c49e4936d994ab059cf3d645026c3827e5a13db6d18e3
+        checksum/secret: 77d9ab80e5da30467883e2c158e7b9df87e6d559f8c694e49cd1c9914491c0e8
     spec:      
       securityContext:
         fsGroup: 1001
@@ -1398,23 +1806,6 @@ spec:
           serviceName: robomotion-robomotion-proxy
           servicePort: 80
 ---
-# Source: robomotion/templates/session-store-secret.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: robomotion-session-store
-  annotations:
-    "helm.sh/hook": "pre-install"
-    "helm.sh/hook-delete-policy": "before-hook-creation"
-  labels:
-    app.kubernetes.io/name: robomotion
-    helm.sh/chart: robomotion-1.0.2
-    app.kubernetes.io/instance: robomotion
-    app.kubernetes.io/managed-by: Helm
-type: Opaque
-data:
-  secret: MLAhMJUxSxVgw0PaQeD7AEJqj5VdKBuH
----
 # Source: robomotion/charts/minio/templates/post-install-create-bucket-job.yaml
 apiVersion: batch/v1
 kind: Job
@@ -1461,3 +1852,20 @@ spec:
           requests:
             cpu: 250m
             memory: 256Mi
+---
+# Source: robomotion/templates/session-store-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: robomotion-session-store
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+  labels:
+    app.kubernetes.io/name: robomotion
+    helm.sh/chart: robomotion-1.0.3
+    app.kubernetes.io/instance: robomotion
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+data:
+  secret: K5nly9xuLvJKPzCiQZz5ze6j2G1PI0Dw
